@@ -1,0 +1,34 @@
+@startuml
+' Inheritance
+class User {
+  - id: UUID
+  - name: String
+  + login(): bool
+}
+class Admin
+Admin --|> User
+
+' Classes
+class Product {
+  - id: UUID
+  - name: String
+  - price: Decimal
+}
+class Order {
+  - id: UUID
+  - date: Date
+  + total(): Decimal
+}
+class Payment {
+  - id: UUID
+  - amount: Decimal
+  - method: String
+}
+
+' Associations
+User "1" -- "0..*" Order : places >
+Order "1" o-- "1..*" Product : contains >
+Order "1" -- "0..1" Payment : paid_by >
+Product "0..*" -- "0..*" Order : listed_in >
+
+@enduml

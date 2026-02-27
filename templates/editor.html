@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive UML Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .confidence-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            background: #f8f9ff;
+            padding: 15px 20px;
+            border-bottom: 2px solid #667eea;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-content {
+            padding: 20px;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+        
+        .diagram-container {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .diagram-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .component-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .component-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .component-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .component-table tr:hover {
+            background: #f8f9ff;
+        }
+        
+        .confidence-bar {
+            width: 100px;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            transition: width 0.3s;
+        }
+        
+        .confidence-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0 3px;
+            transition: all 0.2s;
+        }
+        
+        .btn-edit {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .btn-edit:hover {
+            background: #1976D2;
+        }
+        
+        .btn-delete {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background: #d32f2f;
+        }
+        
+        .btn-add {
+            background: #4caf50;
+            color: white;
+            padding: 10px 20px;
+            font-size: 1rem;
+        }
+        
+        .btn-add:hover {
+            background: #45a049;
+        }
+        
+        .btn-export {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+        }
+        
+        .btn-export:hover {
+            background: #764ba2;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin: 20px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .attribute-item,
+        .method-item {
+            background: #f8f9ff;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(102, 126, 234, 0.1);
+            border-left-color: #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 Interactive UML Editor</h1>
+        <span class="confidence-badge">Overall Confidence: <span id="overall-confidence">{{ "%.1f" | format(diagram_data.overall_confidence * 100) }}%</span></span>
+    </div>
+    
+    <div class="container">
+        <!-- Component Editor Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                📝 Components Editor
+                <button class="btn btn-add" onclick="addNewClass()">+ Add Class</button>
+            </div>
+            <div class="panel-content">
+                <div class="actions">
+                    <button class="btn btn-export" onclick="exportJSON()">📥 Export JSON</button>
+                    <button class="btn btn-export" onclick="exportXMI()">📥 Export XMI</button>
+                    <button class="btn btn-export" onclick="regenerateDiagram()">🔄 Regenerate</button>
+                </div>
+                
+                <div class="section-title">Classes</div>
+                <table class="component-table">
+                    <thead>
+                        <tr>
+                            <th>Class Name</th>
+                            <th>Attributes</th>
+                            <th>Methods</th>
+                            <th>Confidence</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="classes-tbody">
+                        {% for cls in diagram_data.classes %}
+                        <tr data-class-name="{{ cls.name }}">
+                            <td><strong>{{ cls.name }}</strong></td>
+                            <td>{{ cls.attributes|length }}</td>
+                            <td>{{ cls.methods|length }}</td>
+                            <td>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: {{ cls.confidence * 100 }}%"></div>
+                                    <div class="confidence-text">{{ "%.0f" | format(cls.confidence * 100) }}%</div>
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-edit" onclick='editClass({{ cls.model_dump_json() }})'>Edit</button>
+                                <button class="btn btn-delete" onclick="deleteClass('{{ cls.name }}')">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <div class="section-title">Relationships</div>
+                <table class="component-table">
+                    <thead>
+                        <tr>
+                            <th>From</th>
+                            <th>Type</th>
+                            <th>To</th>
+                            <th>Confidence</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="relationships-tbody">
+                        {% for rel in diagram_data.relationships %}
+                        <tr data-rel-index="{{ loop.index0 }}">
+                            <td>{{ rel.from_class }}</td>
+                            <td><em>{{ rel.relationship_type }}</em></td>
+                            <td>{{ rel.to_class }}</td>
+                            <td>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: {{ rel.confidence * 100 }}%"></div>
+                                    <div class="confidence-text">{{ "%.0f" | format(rel.confidence * 100) }}%</div>
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-edit" onclick='editRelationship({{ rel.model_dump_json() }}, {{ loop.index0 }})'>Edit</button>
+                                <button class="btn btn-delete" onclick="deleteRelationship({{ loop.index0 }})">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Diagram Preview Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                📊 UML Diagram Preview
+            </div>
+            <div class="panel-content">
+                <div class="diagram-container" id="diagram-container">
+                    <img src="{{ diagram_url }}" alt="UML Diagram" id="diagram-image">
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="{{ diagram_url }}" class="btn btn-export" download>⬇️ Download PNG</a>
+                    <a href="{{ svg_url }}" class="btn btn-export" download>⬇️ Download SVG</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Class Modal -->
+    <div id="classModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Edit Class</div>
+            <form id="classForm">
+                <input type="hidden" id="original-class-name">
+                <div class="form-group">
+                    <label>Class Name:</label>
+                    <input type="text" id="class-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Confidence (0-1):</label>
+                    <input type="number" id="class-confidence" min="0" max="1" step="0.1" value="0.9">
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="btn btn-edit">Save</button>
+                    <button type="button" class="btn" onclick="closeModal('classModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Edit Relationship Modal -->
+    <div id="relationshipModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Edit Relationship</div>
+            <form id="relationshipForm">
+                <input type="hidden" id="rel-index">
+                <div class="form-group">
+                    <label>From Class:</label>
+                    <input type="text" id="rel-from" required>
+                </div>
+                <div class="form-group">
+                    <label>To Class:</label>
+                    <input type="text" id="rel-to" required>
+                </div>
+                <div class="form-group">
+                    <label>Relationship Type:</label>
+                    <select id="rel-type">
+                        <option value="inheritance">Inheritance</option>
+                        <option value="association">Association</option>
+                        <option value="aggregation">Aggregation</option>
+                        <option value="composition">Composition</option>
+                        <option value="dependency">Dependency</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Confidence (0-1):</label>
+                    <input type="number" id="rel-confidence" min="0" max="1" step="0.1" value="0.85">
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="btn btn-edit">Save</button>
+                    <button type="button" class="btn" onclick="closeModal('relationshipModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        const sessionId = "{{ session_id }}";
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+        
+        function editClass(classData) {
+            document.getElementById('original-class-name').value = classData.name;
+            document.getElementById('class-name').value = classData.name;
+            document.getElementById('class-confidence').value = classData.confidence;
+            document.getElementById('classModal').classList.add('active');
+        }
+        
+        function addNewClass() {
+            document.getElementById('original-class-name').value = '';
+            document.getElementById('class-name').value = '';
+            document.getElementById('class-confidence').value = 0.9;
+            document.getElementById('classModal').classList.add('active');
+        }
+        
+        function editRelationship(relData, index) {
+            document.getElementById('rel-index').value = index;
+            document.getElementById('rel-from').value = relData.from_class;
+            document.getElementById('rel-to').value = relData.to_class;
+            document.getElementById('rel-type').value = relData.relationship_type;
+            document.getElementById('rel-confidence').value = relData.confidence;
+            document.getElementById('relationshipModal').classList.add('active');
+        }
+        
+        async function deleteClass(className) {
+            if (!confirm(`Delete class "${className}"?`)) return;
+            
+            const response = await fetch(`/api/edit/${sessionId}/class/${className}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                location.reload();
+            }
+        }
+        
+        async function deleteRelationship(index) {
+            if (!confirm('Delete this relationship?')) return;
+            
+            const response = await fetch(`/api/edit/${sessionId}/relationship/${index}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                location.reload();
+            }
+        }
+        
+        document.getElementById('classForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const originalName = document.getElementById('original-class-name').value;
+            const newData = {
+                name: document.getElementById('class-name').value,
+                confidence: parseFloat(document.getElementById('class-confidence').value),
+                attributes: [],
+                methods: []
+            };
+            
+            const url = originalName 
+                ? `/api/edit/${sessionId}/class/${originalName}`
+                : `/api/edit/${sessionId}/class`;
+            
+            const response = await fetch(url, {
+                method: originalName ? 'PUT' : 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(newData)
+            });
+            
+            if (response.ok) {
+                location.reload();
+            }
+        });
+        
+        document.getElementById('relationshipForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const index = document.getElementById('rel-index').value;
+            const newData = {
+                from_class: document.getElementById('rel-from').value,
+                to_class: document.getElementById('rel-to').value,
+                relationship_type: document.getElementById('rel-type').value,
+                confidence: parseFloat(document.getElementById('rel-confidence').value)
+            };
+            
+            const response = await fetch(`/api/edit/${sessionId}/relationship/${index}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(newData)
+            });
+            
+            if (response.ok) {
+                location.reload();
+            }
+        });
+        
+        async function exportJSON() {
+            window.open(`/api/export/${sessionId}/json`, '_blank');
+        }
+        
+        async function exportXMI() {
+            window.open(`/api/export/${sessionId}/xmi`, '_blank');
+        }
+        
+        async function regenerateDiagram() {
+            const container = document.getElementById('diagram-container');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Regenerating diagram...</p></div>';
+            
+            const response = await fetch(`/api/regenerate/${sessionId}`);
+            if (response.ok) {
+                const data = await response.json();
+                container.innerHTML = `<img src="${data.diagram_url}?t=${Date.now()}" alt="UML Diagram">`;
+            }
+        }
+    </script>
+</body>
+</html>
