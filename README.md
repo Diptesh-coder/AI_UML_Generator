@@ -113,4 +113,6 @@ MIT License
 
 ## 👨‍💻 Author
 
+*Diptesh Maji*
+
 AI-Based Automated UML Diagram Generator
